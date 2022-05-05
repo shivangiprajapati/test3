@@ -1,0 +1,314 @@
+database.java
+public class database extends SQLiteOpenHelper {
+
+    public database(@Nullable Context context, @Nullable String name, @Nullable SQLiteDatabase.CursorFactory factory, int version) {
+        super(context, name, factory, version);
+    }
+
+    @Override
+    public void onCreate(SQLiteDatabase sqLiteDatabase) {
+        sqLiteDatabase.execSQL("CREATE TABLE Employee(Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL, Salary FLOAT NOT NULL)");
+    }
+
+    @Override
+    public void onUpgrade(SQLiteDatabase sqLiteDatabase, int i, int i1) {
+        sqLiteDatabase.execSQL("DROP TABLE IF EXISTS Employee");
+        onCreate(sqLiteDatabase);
+    }
+
+    public void EmployeeInsert(String Name, Float Salary) {
+        SQLiteDatabase sqLiteDatabase = this.getWritableDatabase();
+        ContentValues contentValues = new ContentValues();
+
+        contentValues.put("Name", Name);
+        contentValues.put("Salary", Salary);
+
+        sqLiteDatabase.insert("Employee", null, contentValues);
+        sqLiteDatabase.close();
+    }
+
+    public void EmployeeUpdate(int Id, String Name, Float Salary) {
+        SQLiteDatabase sqLiteDatabase = this.getWritableDatabase();
+        ContentValues contentValues = new ContentValues();
+
+        contentValues.put("Name", Name);
+        contentValues.put("Salary", Salary);
+
+        sqLiteDatabase.update("Employee", contentValues, "Id=?", new String[]{String.valueOf(Id)});
+        sqLiteDatabase.close();
+    }
+
+    public void EmployeeDelete(int Id) {
+        SQLiteDatabase sqLiteDatabase = this.getWritableDatabase();
+        ContentValues contentValues = new ContentValues();
+
+        sqLiteDatabase.delete("Employee", "Id=?", new String[]{String.valueOf(Id)});
+        sqLiteDatabase.close();
+    }
+
+    public Cursor EmployeeSelect() {
+        SQLiteDatabase sqLiteDatabase = this.getWritableDatabase();
+        Cursor cursor = sqLiteDatabase.rawQuery("SELECT Id, Name, Salary FROM Employee", null);
+        return cursor;
+    }
+
+    public Cursor EmployeeSelectById(int Id) {
+        SQLiteDatabase sqLiteDatabase = this.getWritableDatabase();
+        Cursor cursor = sqLiteDatabase.rawQuery("SELECT Id, Name, Salary FROM Employee WHERE Id = " + Id, null);
+        return cursor;
+    }
+}
+
+mainactivity emp
+public class EmployeeActivity extends AppCompatActivity {
+
+    database database = new database(this, "Employee", null, 1);
+
+    private EditText etId, etName, etSalary;
+    private ListView listView;
+    private ArrayList<String> stringArrayList = new ArrayList<String>();
+    private ArrayAdapter<String> stringArrayAdapter;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_employee);
+
+        etId = findViewById(R.id.etEmployeeActivityId);
+        etName = findViewById(R.id.etEmployeeActivityName);
+        etSalary = findViewById(R.id.etEmployeeActivitySalary);
+
+        listView = findViewById(R.id.lvEmployeeActivity);
+
+        Employee_Select();
+
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                String Employee = adapterView.getItemAtPosition(i).toString().split(" ") [0];
+                Cursor cursor = database.EmployeeSelectById(Integer.parseInt(Employee));
+                cursor.moveToNext();
+                etId.setText(cursor.getString(0));
+                etName.setText(cursor.getString(1));
+                etSalary.setText(cursor.getString(2));
+            }
+        });
+    }
+
+    public void btnEmployeeActivityDelete_OnClick(View view) {
+        database.EmployeeDelete(Integer.parseInt(etId.getText().toString()));
+
+        Reset();
+    }
+
+    public void btnEmployeeActivityUpdate_OnClick(View view) {
+        database.EmployeeUpdate(Integer.parseInt(etId.getText().toString()), etName.getText().toString(), Float.parseFloat(etSalary.getText().toString()));
+
+        Reset();
+    }
+
+    public void btnEmployeeActivityInsert_OnClick(View view) {
+        database.EmployeeInsert(etName.getText().toString(), Float.parseFloat(etSalary.getText().toString()));
+
+        Reset();
+    }
+
+    private void Employee_Select() {
+        stringArrayList = new ArrayList<String>();
+        Cursor cursor = database.EmployeeSelect();
+
+        stringArrayAdapter = new ArrayAdapter<String>(this, androidx.constraintlayout.widget.R.layout.support_simple_spinner_dropdown_item, stringArrayList);
+        listView.setAdapter(stringArrayAdapter);
+
+        while (cursor.moveToNext()) {
+            stringArrayList.add(cursor.getInt(0) + " " + cursor.getString(1) + " " + cursor.getFloat(2));
+        }
+
+        stringArrayAdapter.notifyDataSetChanged();
+    }
+
+    private void Reset(){
+        etId.setText("");
+        etName.setText("");
+        etSalary.setText("");
+
+        Employee_Select();
+    }
+
+
+databasehelper
+
+public class DatabaseHelper extends SQLiteOpenHelper {
+
+     static final String DATABASE_NAME ="MY_COMPANY.DB";
+     static final int DATABASE_VERSION =1;
+
+
+      static  final  String DATABASE_TABLE ="USERS";
+      static  final  String USER_ID ="_ID";
+      static  final  String USER_NAME ="user_name";
+      static  final  String USER_PASSWORD="password";
+
+      private  static  final  String CRETAE_DB_QUERY ="CREATE TABLE " + DATABASE_TABLE +"("
+              +USER_ID +" INTEGER PRIMARY KEY AUTOINCREMENT," +USER_ID + "TEXT NOT NULL,"+ USER_PASSWORD +"TEXT NOT NULL"+")";
+
+
+
+    public DatabaseHelper(@Nullable Context context) {
+        super(context, DATABASE_NAME, null, 1);
+    }
+
+    @Override
+    public void onCreate(SQLiteDatabase sqLiteDatabase ) {
+        sqLiteDatabase.execSQL(CRETAE_DB_QUERY);
+
+
+    }
+
+    @Override
+    public void onUpgrade(SQLiteDatabase sqLiteDatabase, int i, int i1) {
+        sqLiteDatabase.execSQL( "DROP TABLE IF EXISTS " +DATABASE_TABLE);
+
+    }
+}
+
+
+databasemanager
+public class DatabaseManager {
+
+    private DatabaseHelper dbeHelper;
+    private Context context;
+    private SQLiteDatabase database;
+
+    public DatabaseManager(Context ctx) {
+        context = ctx;
+
+    }
+
+    public DatabaseManager open() throws SQLDataException {
+        dbeHelper = new DatabaseHelper(context);
+        database = dbeHelper.getWritableDatabase();
+        return this;
+
+    }
+
+    public void close() {
+
+        dbeHelper.close();
+    }
+
+    public void insert(String username, String password) {
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(DatabaseHelper.USER_NAME, username);
+        contentValues.put(DatabaseHelper.USER_PASSWORD, password);
+        database.insert(DatabaseHelper.DATABASE_TABLE, null, contentValues);
+    }
+
+    public Cursor fetch() {
+        String[] columns = new String[]{DatabaseHelper.USER_ID, DatabaseHelper.USER_NAME, DatabaseHelper.USER_PASSWORD};
+        Cursor cursor = database.query(DatabaseHelper.DATABASE_TABLE,columns,null,null,null,null,);
+        if (cursor != null) {
+            cursor.moveToFirst();
+
+        }
+        return  cursor;
+
+    }
+      public int update(long _id,String username,String password){
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(DatabaseHelper.USER_NAME,username);
+        contentValues.put(DatabaseHelper.USER_PASSWORD,password);
+        int rel = database.update(DatabaseHelper.DATABASE_TABLE,contentValues,DatabaseHelper.USER_ID+"="+_id,null);
+        return  rel;
+      }
+     public  void  delete(long _id){
+        database.delete(DatabaseHelper.DATABASE_TABLE,DatabaseHelper.USER_ID+"a"+  _id,null);
+     }
+    }
+
+mainavtivty
+
+public class MainActivity extends AppCompatActivity {
+    EditText editUserID;
+    EditText editUserName;
+    EditText editPassword;
+ DatabaseManager  dbManger;
+
+
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        editUserID =(EditText)  findViewById(R.id.editTextTextID);
+        editUserName =(EditText)  findViewById(R.id.editTextTextID);
+        editPassword =(EditText)  findViewById(R.id.editTextTextPassword);
+         dbManger = new DatabaseManager(this);
+
+
+     }
+    public void  btnInsertPressed(View v){
+
+    }
+       public  void  btnFetchPressed(View v){
+
+       }
+        public  void  btnUpdatePressed(View V){
+
+        }
+        public  void  btnDeletePressed(View v){
+
+        }
+  student
+
+public class StudentActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_student);
+    }
+
+    public void btnStudentActivity_OnClick(View view) {
+        EditText etName = findViewById(R.id.etStudentActivityName);
+        EditText etAge = findViewById(R.id.etStudentActivityAge);
+        EditText etAddress = findViewById(R.id.etStudentActivityAddress);
+        EditText etCity = findViewById(R.id.etStudentActivityCity);
+        EditText etPhone = findViewById(R.id.etStudentActivityPhone);
+
+        Intent intent = new Intent(this, StudentDetailActivity.class);
+        intent.putExtra("Name", etName.getText().toString());
+        intent.putExtra("Age", etAge.getText().toString());
+        intent.putExtra("Address", etAddress.getText().toString());
+        intent.putExtra("City", etCity.getText().toString());
+        intent.putExtra("Phone", etPhone.getText().toString());
+        startActivity(intent);
+    }
+}
+
+studentdetils
+
+public class StudentDetailActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_student_detail);
+
+        Intent intent = getIntent();
+        TextView tvName = findViewById(R.id.tvStudentDetailActivityName);
+        TextView tvAge = findViewById(R.id.tvStudentDetailActivityAge);
+        TextView tvAddress = findViewById(R.id.tvStudentDetailActivityAddress);
+        TextView tvCity = findViewById(R.id.tvStudentDetailActivityCity);
+        TextView tvPhone = findViewById(R.id.tvStudentDetailActivityPhone);
+
+        tvName.setText(intent.getStringExtra("Name"));
+        tvAge.setText(intent.getStringExtra("Age"));
+        tvAddress.setText(intent.getStringExtra("Address"));
+        tvCity.setText(intent.getStringExtra("City"));
+        tvPhone.setText(intent.getStringExtra("Phone"));
+    }
+}
+
+
+
